@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from bcp.parse import convert_promethion_date
 
+
 '''
 Utility functions.
 '''
