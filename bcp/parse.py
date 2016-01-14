@@ -16,6 +16,10 @@ def convert_promethion_date(dt_str):
     month, day, year = d.split('/')
     return datetime.datetime(*map(int, [year, month, day]+ t.split(':')))
 
+def add_seconds(dt, seconds):
+    '''Add `seconds` to `dt`.'''
+    return dt + datetime.timedelta(seconds=seconds)
+
 def time_since_start(dt_cur, dt_start):
     '''Count total seconds elapsed between dt_start and dt_cur'''
     return (dt_cur - dt_start).total_seconds()

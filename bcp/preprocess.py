@@ -78,3 +78,59 @@ def discretize_observations(observations, n):
 
     d_observations = x*(x+1) + y
     return d_observations.astype(int)
+
+def remove_artifacts_body_mass():
+    '''A function which processes body mass.
+
+    The challenege here is that the signal is very noisy at many different
+    frequencies. Second to second, when the mouse is in its house, there is
+    significant fluctuation in the body mass. Over ~1h time scales there are
+    large changes in mass - up to .8g. To get an accurate reading of body mass
+    during these events is challenging. During times when the mouse is not
+    inhabiting the house some small positive weight is registered. This is easy
+    to programatically eliminate, but detecting when it has gone back to in the
+    house (and giving an accurate weight reading) is hard. 
+    '''
+    pass
+
+def remove_artifacts_water():
+    '''Remove artifacts from water data.'''
+    return data
+
+def remove_artifacts_food():
+    '''Remove artifacts from food hopper data.'''
+    return data
+
+def remove_artifacts_wheel_running(data, max_rps=10):
+    '''Remove artifacts from wheel running data.
+
+    Notes
+    -----
+    The maximum RPS that we are confident the Promethion cage can detect is 10.
+
+    Parameters
+    ----------
+    data : np.array
+        Wheel count data indicating number of revolutions per second.
+    max_rps : int, optional
+        Maximum RPS allowed in the data.
+
+    Returns
+    -------
+    np.array
+        Data greater than max_rps will be reduced to max_rps.
+    '''
+    return np.where(data > max_rps, max_rps, data)
+
+def remove_artifacts_x_position(data):
+    '''Remove artifacts from x position data.'''
+    return data
+
+def remove_artifacts_y_position(data):
+    '''Remove artifacts from y position data.'''
+    return data
+
+def remove_artifacts_z_position(data):
+    '''Remove artifacts from y position data.'''
+    return data
+
