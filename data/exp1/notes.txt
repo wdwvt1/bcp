@@ -1,10 +1,9 @@
 This folder contains the data from an experiment on 8 mice which was conducted between 06/11/2015 and 07/16/15. The mice are infected on day X. 
 
-The data here is 
 
 Testing
 -------
-I tested that this data was correctly derived from the Promethion files by comparing the output of awk commands with the saved arrays. For instance:
+I tested that this data was correctly derived from the Promethion files by comparing the output of awk commands with the saved arrays. Tested with new parsing code - as of 1/13/2016.
 
 ```bash
 for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1_raw_Promethion_061115/** | grep 5_Infection_E); do awk -F "," '{print $2}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_Xpos_1.txt; done
@@ -47,6 +46,3 @@ awk_vals = np.array(awk_vals, dtype=np.int32)
 npy_vals = np.load('/Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/BodyMass_7.npy').astype(np.int32)
 assert (awk_vals == npy_vals).all()
 ```
-
-# wheel count 1
-for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1_raw_Promethion_061115/** | grep 5_Infection_E); do awk -F "," '{print $8}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_WheelCount_1.txt; done

@@ -70,6 +70,8 @@ def promethion_to_array(fp, cages, fields, start_timestamp=None):
 
     if start_timestamp is None:
         start_timestamp = timestamps[0]
+    else:
+        start_timestamp = convert_promethion_date(start_timestamp)
     times = [time_since_start(i, start_timestamp) for i in timestamps]
 
     return np.array(data).astype(np.float32), times, keys

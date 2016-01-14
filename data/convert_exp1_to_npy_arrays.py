@@ -32,6 +32,7 @@ for cage in cages:
     for field in fields:
         fp = _make_fp(output_base_fp, field, cage)
         np.save(fp, np.array([]))
+time_fp = os.path.join(output_base_fp, 'time.npy')
 np.save(os.path.join(output_base_fp, 'time.npy'), np.array([]))
 
 # Read new data and append it to the arrays.
@@ -39,8 +40,9 @@ for fp in fps:
     t0 = time.time()
     f = os.path.join(base_fp, fp)
     data, times, keys = promethion_to_array(fp, cages, fields, 
-                                            start_timestamp=None)
-    np.save(os.path.join(output_base_fp, 'time.npy'), times)
+                                            start_timestamp='6/23/2015 11:46:44')
+    new_time_arr = append_to_npy(times, time_fp, append=True)
+    np.save(time_fp, new_time_arr)
     for col, key in zip(data.T, keys):
         field, cage = key.split('_')
         _out_fp = _make_fp(output_base_fp, field, cage)
