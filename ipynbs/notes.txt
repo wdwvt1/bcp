@@ -1,0 +1,1 @@
+This folder contains iPython notebooks giving the justifications for the functions found in bcp/{preprocess.py,feature_extraction.py,classify.py}.
