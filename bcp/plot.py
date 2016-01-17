@@ -7,6 +7,7 @@ import datetime
 import copy
 from bcp.util import add_seconds
 
+
 def circadian_rythm_axvspan(day_begin, day_end, start_timestamp, times):
     '''Create list of times when mice experience light.
 
