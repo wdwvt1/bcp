@@ -5,6 +5,38 @@ import numpy as np
 Code for calculating statistics on Promethion data.
 '''
 
+def centered_moving_average(data, r):
+    '''Calculate moving average of data with ma_data[i]=data[i-r:i+r]/(2r+1).
+
+    Parameters
+    ----------
+    data : np.array
+        One dimensional array of data whose moving average is to be calculated.
+    r : int
+        Radius of moving average.
+
+    Returns
+    -------
+    ma_data : np.array
+        One dimensional array of same shape as `data`, where
+        ma_data[i]=data[i-r:i+r]/(2r+1). At the beginning and end of `ma_data`,
+        where the number of surrounding points is insufficient, 0's are
+        reported.
+
+    Notes
+    -----
+    The radius of the window (`r`) is not inclusive of the point at which the
+    window is centered. For example, if r=3:
+    data    = [1, 4, 5,   19,    2, 2, 4, 5]
+    ma_data = [0, 0, 0, 37/7, 41/7, 0, 0, 0]
+    '''
+    l = len(data)
+    ma_data = np.zeros(l)
+    ma_data[r] = data[:2*r + 1].sum() 
+    for i in range(r+1, l - r):
+        ma_data[i] = ma_data[i-1] + data[i+r] - data[i-(r+1)]
+    return ma_data/float(2*r + 1)
+
 def xy_distance_over_window(xs, ys, window):
     '''Calculate the distance traveled over the given window.
 

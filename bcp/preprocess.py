@@ -1,10 +1,94 @@
 #!/usr/bin/env python
 from __future__ import division
 
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import time, datetime, imp
 from hmmlearn.hmm import MultinomialHMM
+
+def weight_sensor_positive_spikes(data, times, threshold):
+    '''Find positive spikes in the weight data due to measurement. 
+
+    Parameters
+    ----------
+    data : np.array
+        One dimensional array with data from a weight sensor (water, food,
+        bodymass).
+    times : np.array
+        One dimensional array with the time in seconds since the start of the
+        experiment for each element of `data`.
+    threshold : numeric
+        Amount that data[i+1] must be greater than data[i] to count as a spike.
+
+    Returns
+    -------
+    indices : np.array
+        Indices of spikes in `data`.
+
+    Notes
+    -----
+    Frequently the weight sensors (water, food, bodymass) will show positive
+    spikes; points adjacent in time (1s) that have vastly different values.
+    When these spikes are positive, it is likely that the animal is interacting
+    with the sensor. This function identifies these points, while taking into
+    account the discontinuous nature of the data, i.e. there are likely to be
+    spikes between when the machine is turned on and off due to e.g. water
+    drops falling off the water.
+    '''
+    time_diffs = (times[1:] - times[:-1]) > 1
+    data_diffs = (data[1:] - data[:-1]) >= threshold
+    return (~time_diffs * data_diffs).nonzero()[0]
+
+def smooth_positive_spikes(data, spikes, backward_window, forward_window):
+    '''Replace positive spikes with averages of previous points in data.
+
+    Parameters
+    ----------
+    data : np.array
+        One dimensional array with data from a weight sensor (water, food,
+        bodymass).
+    spikes : np.array
+        Indices of spikes in `data`.
+    backward_window : int
+        Number of points of data prior to i to use to compute mean.
+    forward_window : int
+        Number of points of data after i to set to mean.
+
+    Returns
+    -------
+    s_data : np.array
+        Copy of data with spikes smoothed.
+
+    Notes
+    -----
+    This function attempts to remove the positive spikes seen in weight data.
+    The algorithm is as follows:
+    1. Make a copy of `data` called `s_data`.
+    2. Step through indices of spikes. If a spike occurs at index i, the points
+       in the interval [i-backward_window, i] of `s_data` will have their mean
+       taken. The points in the interval [i, i+forward_window] will be set to
+       the mean value computed via the backward window. 
+    Because `spikes` is an ordered list of spikes and we make updates to the
+    values of `s_data` in the order of `spikes`, whenever spikes occur at
+    intervals shorter than `forward_window`, we will be using already smoothed
+    data for the backward window mean calculation.
+    '''
+    s_data = copy.copy(data)
+    if (spikes < backward_window).any():
+        raise ValueError('Some spikes occur at indices too close to the left '
+                         'edge of the data (i.e. smaller than '
+                         '`backward_window`). Not all positive spikes can be '
+                         'smoothed.')
+    if ((data.shape[0] - spikes) < forward_window).any():
+        raise ValueError('Some spikes occur at indices too close to the right '
+                         'edge of the data. Not all positive spikes can be '
+                         'smoothed.')
+    for i in spikes:
+        s_data[i:i+forward_window] = s_data[i-backward_window:i].mean()
+    return s_data
+
+
 
 def smooth(data, radius, a_thresh, w_thresh):
     '''Smooth data.
