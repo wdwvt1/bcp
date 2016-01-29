@@ -16,9 +16,9 @@ def convert_promethion_date(dt_str):
     month, day, year = d.split('/')
     return datetime.datetime(*map(int, [year, month, day]+ t.split(':')))
 
-def time_since_start(dt_cur, dt_start):
-    '''Count total seconds elapsed between dt_start and dt_cur'''
-    return (dt_cur - dt_start).total_seconds()
+def time_since_start(x, dt_start):
+    '''Count total seconds elapsed between dt_start and x'''
+    return (x - dt_start).total_seconds()
 
 def promethion_to_array(fp, cages, fields, start_timestamp=None):
     '''Convert combined Promethion files to numpy arrays.

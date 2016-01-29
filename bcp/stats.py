@@ -1,127 +1,104 @@
 #!/usr/bin/env python
+from __future__ import division
+
 import numpy as np
 
 '''
 Code for calculating statistics on Promethion data.
+
+Examples
+--------
+To calculate the number of rearing events over a moving window.
+>>> zs_binary = (zs > 0).astype(float)
+>>> moving_function(zs_binary, window, 'sum', 1)
 '''
 
-def centered_moving_average(data, r):
-    '''Calculate moving average of data with ma_data[i]=data[i-r:i+r]/(2r+1).
+def moving_function(data, window, function='sum', boundary=1):
+    '''Calculate moving average or sum of data.
 
     Parameters
     ----------
     data : np.array
         One dimensional array of data whose moving average is to be calculated.
-    r : int
-        Radius of moving average.
+    window : int
+        Diameter (window size) of moving average (inclusive of center point).
+    function : {'sum' or 'average'}, optional
+        The function to compute over the data.
+    boundary : {1 or 2}, optional
+        If 1, do not alter the convolution calculation at the edges of `data`
+        where the function cannot be calculated because there are not enough
+        points on both sides of the center. If 2, replace the edges of the
+        computed data with values from the raw `data`.
 
     Returns
     -------
     ma_data : np.array
-        One dimensional array of same shape as `data`, where
-        ma_data[i]=data[i-r:i+r]/(2r+1). At the beginning and end of `ma_data`,
-        where the number of surrounding points is insufficient, 0's are
-        reported.
 
     Notes
     -----
-    The radius of the window (`r`) is not inclusive of the point at which the
-    window is centered. For example, if r=3:
-    data    = [1, 4, 5,   19,    2, 2, 4, 5]
-    ma_data = [0, 0, 0, 37/7, 41/7, 0, 0, 0]
+    If `window` is an even number, the boundaries of the computed data will
+    be slightly different. Specficially, an even `window` requires that an
+    uneven number of non-overlapping dot-products be taken by the convolution
+    resulting in a left edge which has one more point (by numpy convention) that
+    is the product of a non-overlapping dot-product.
+
+    This function is easily expressed as both a convolution and a mean
+    calculation and then a series of additions and subtractions. For large
+    input `data` (~1e6 points), the convolution code is ~2X slower.
     '''
-    l = len(data)
-    ma_data = np.zeros(l)
-    ma_data[r] = data[:2*r + 1].sum() 
-    for i in range(r+1, l - r):
-        ma_data[i] = ma_data[i-1] + data[i+r] - data[i-(r+1)]
-    return ma_data/float(2*r + 1)
+    if function == 'sum':
+        ma_data = np.convolve(np.ones(window, dtype=float), data, 'same')
+    elif function == 'average':
+        ma_data = np.convolve(np.ones(window, dtype=float)/window, data, 'same')
+    if boundary == 1:
+        return ma_data
+    elif boundary == 2:
+        full_overlaps = (len(data) - window) + 1
+        partial_overlaps = len(data) - full_overlaps
+        # If `window` is even we need to have a different amount of boundary 
+        # points rescaled as described in notes.
+        _left = np.ceil(partial_overlaps/2.)
+        _right = np.floor(partial_overlaps/2.)
+        ma_data[:_left] = data[:_left]
+        ma_data[-_right:] = data[-_right:]
+        return ma_data
+    # Code which is faster given large enough input. Note that `r` will have to
+    # be adjusted given the way the convolution code is written; i.e. this code
+    # does not return equivalent results with the function. 
+    # l = len(data)
+    # ma_data = np.zeros(l)
+    # ma_data[r] = data[:2*r + 1].sum() 
+    # for i in range(r+1, l - r):
+    #     ma_data[i] = ma_data[i-1] + data[i+r] - data[i-(r+1)]
+    # return ma_data/float(2*r + 1)
 
-def xy_distance_over_window(xs, ys, window):
-    '''Calculate the distance traveled over the given window.
-
-    Note: there will be len(xs) - window distances returned from this
-    function. This is because N x coordinates have N-1 differences between them. 
-    The practical consequence is that wheel_distance_over_window run on the same
-    cage data will result in a vector longer by 1.
+def distance_traveled_1d(data):
+    '''Calculate (Manhattan) distance traveled from coordinate `data`.
 
     Parameters
     ----------
-    xs : np.array
-        X coordinates of the mouse.
-    ys : np.array
-        Y coordinates of the mouse.
-    window : int
-        Size of window (length of slice) to sum movement distance over.
+    data : np.array
+        X or Y coordinates of mouse.
 
     Returns
     -------
-    rx, ry: np.array
-        Distance traveled by mouse in x, y direction over window. rx[i] is the 
-        amount of distance traveled between time (i, i + 1 + window).'''
-    # if this fails we stop since something has gone wrong with parsing
-    assert len(xs) == len(ys)
+    np.array
+    '''
+    return abs(data[1:] - data[:-1]).sum()
 
-    rx = np.empty(shape=len(xs) - window, dtype=np.float32)
-    ry = np.empty(shape=len(ys) - window, dtype=np.float32)
-
-    xs_first_diff_cs = abs(xs[1:] - xs[:-1]).cumsum()
-    ys_first_diff_cs = abs(ys[1:] - ys[:-1]).cumsum()
-
-    rx[0] = xs_first_diff_cs[window - 1]
-    ry[0] = ys_first_diff_cs[window - 1]
-
-    for i in range(1, len(xs) - window):
-        rx[i] = xs_first_diff_cs[window - 1 + i] - xs_first_diff_cs[i-1]
-        ry[i] = ys_first_diff_cs[window - 1 + i] - ys_first_diff_cs[i-1]
-
-    return rx, ry
-
-def wheel_distance_over_window(rs, window, radius=11.43/2.):
-    '''Calculate distance mouse moves on wheel during window.
+def distance_traveled_2d(x_data, y_data):
+    '''Calculate (Euclidean) distance traveled from coordinate data.
 
     Parameters
-    ----------
-    rs : np.array
-        Revolutions per second that the mouse achieves.
-    window : int
-        Size of window (length of slice) to sum running distance over.
-    radius : float
-        Radius of the wheel in cm's. Default to measured distance. 
-
+    ---------- 
+    x_data : np.array
+        X coordinates of mouse.
+    y_data : np.array
+        Y coordinates of mouse.
+    
     Returns
     -------
-    r : np.array
-        Distance traveled by mouse over each window period. r[i] is the amount
-        of distance the mouse travels in the time frame [i, window+i-1].
+    np.array
     '''
-    r = np.empty(shape=len(rs) + 1 - window, dtype=np.float32)
-    rc = rs.cumsum()
-    r[0] = rc[window - 1]
-    for i in range(1, len(rc) + 1 - window):
-        r[i] = rc[window - 1 + i] - rc[i -1]
-    return r * radius * 2 * np.pi
-
-def rearing_over_window(zs, window):
-    '''Calculate total number of rearing events during window.
-
-    Parameters
-    ----------
-    zs : np.array
-        z-vector from Promethion data for a given animal.
-    window : int
-        Size of window (length of slice) to sum rearing over.
-
-    Returns
-    -------
-    r : np.array
-        Number of rearing events in the given window over the course of the data
-        vector. r[i] is the number of rearing events that have occurred within 
-        the time frame (i, window+i-1).
-    '''
-    r = np.empty(shape=len(zs) + 1 - window, dtype=np.int)
-    zc = (zs > 0).cumsum()
-    r[0] = zc[window - 1]
-    for i in range(1, len(zc) + 1 - window):
-        r[i] = zc[window - 1 + i] - zc[i -1]
-    return r
+    return (((x_data[1:] - x_data[:-1])**2 +
+             (y_data[1:] - y_data[:-1])**2)**.5).sum()
