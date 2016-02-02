@@ -2,7 +2,9 @@
 
 from unittest import TestCase, main
 import numpy as np
-from bcp.ethoscan import (parse_ethoscan_line, parse_ethoscan_report)
+import datetime
+from bcp.ethoscan import (parse_ethoscan_line, parse_ethoscan_report,
+                          align_ethoscan_data)
 
 
 class TestEthoscan(TestCase):
@@ -149,6 +151,70 @@ class TestEthoscan(TestCase):
         start_time = 3435.
         obs = parse_ethoscan_report(self.ethoscan_report_lines_1, start_time)
         exp[:, 0] += start_time
+        np.testing.assert_array_equal(obs, exp)
+
+    def test_align_ethoscan_data(self):
+        # Simulate a situation where 1 day has elapsed since the beginning of
+        # the experiment and the beginning of the Ethoscan. The Ethoscan will 
+        # report will be for 1h of activity.
+        exp_start = datetime.datetime(2015, 1, 1, 6, 0, 0)
+        eth_start = datetime.datetime(2015, 1, 2, 6, 0, 0)
+        # Assume that the experiment has been stopped for 1h to collect samples
+        # from the mice. 
+        times = np.concatenate((np.arange(23 * 3600),
+                                np.arange(3600) + 24 * 3600))
+        # Mock Ethoscan behavioral classification.
+        edata = np.array([[1, 3, 9, 0, 0, 15.25, 13.5, 0],
+                          [10, 4, 3000, 1560, 0, 2.5, 2.5, 0],
+                          [3010, 0, 570, .6, 0, 14.5, 14.5, 0],
+                          [3580, 6, 19, 0, 13, 16.5, 7.5, 300]])
+        # The times post experiment start that our Ethoscan observations occur
+        # at are different than the actual indices in the times vector due to
+        # the experiment being paused. The actual index of these observations
+        # will be shifted back by 3600 (3600 observations in 1h).
+        times_exp = np.array([[86401, 86410],
+                              [86410, 89410],
+                              [89410, 89980],
+                              [89980, 89999]])
+        exp = times_exp - 3600
+        # Generate observed data.
+        obs = np.empty((4,2))
+        for i, e in enumerate(edata):
+            obs[i] = align_ethoscan_data(exp_start, eth_start, e, times)
+
+        np.testing.assert_array_equal(obs, exp)
+
+        # Simulate a situation where 2 pauses have occurred in experimental
+        # recording (i.e. 2 days of sampling). Seconds between experiment start
+        # and experiment end: 487671.
+        exp_start = datetime.datetime(2015, 2, 28, 7, 42, 15)
+        exp_end = datetime.datetime(2015, 3, 5, 23, 10, 6)
+        # The Ethoscan will start with 97200 seconds to go.
+        eth_start = datetime.datetime(2015, 3, 4, 20, 10, 6)
+        # Our mock times data has a loss of 1000 samples (1000 seconds where 
+        # Promethion machine was off) at the first break, and 2000 samples at
+        # the second break. 
+        times = np.concatenate((np.arange(79000),
+                                80000 + np.arange(115425),
+                                197425 + np.arange(290246)))
+        # Mock Ethoscan behavioral classifications.
+        edata = np.array([[1, 3, 9, 0, 0, 15.25, 13.5, 0],
+                          [10, 4, 3000, 1560, 0, 2.5, 2.5, 0],
+                          [3010, 0, 570, .6, 0, 14.5, 14.5, 0],
+                          [3580, 6, 19, 0, 13, 16.5, 7.5, 300],
+                          [3599, 8, 93600, 0, 15.25, 2.5, 100]])
+
+        times_exp = np.array([[390472, 390481],
+                              [390481, 393481],
+                              [393481, 394051],
+                              [394051, 394070],
+                              [394070, 487670]])
+        exp = times_exp - 3000
+        # Generate observed data.
+        obs = np.empty((5,2))
+        for i, e in enumerate(edata):
+            obs[i] = align_ethoscan_data(exp_start, eth_start, e, times)
+
         np.testing.assert_array_equal(obs, exp)
 
 # run unit tests if run from command-line

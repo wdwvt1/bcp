@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 from __future__ import division
 
-import numpy as np 
+import numpy as np
+from bcp.util import add_seconds
 
 '''
 This library contains functions for replicating the Ethoscan functionality
@@ -79,6 +80,35 @@ def parse_ethoscan_report(lines, start_time=None):
     else:
         data[:, 0] += start_time
         return data
+
+def align_ethoscan_data(exp_start, eth_start, eth_obs, times):
+    '''Find the indices in the `times` vector at which the `eth_obs` occured.
+    
+    Parameters
+    ----------
+    exp_start : datetime.datetime
+        Start of the experiment; i.e. what datetime corresponds to the 0th
+        index of `times`.
+    eth_start : datetime.datetime
+        Start of the Ethoscan report. Ethoscan reports appear to start
+        behavioral classification 1 second after the report starts. Thus, this
+        datetime is 1 second before the first classified behavior.
+    eth_obs : np.array
+        A single observation (row) of parsed Ethoscan data.
+    times : np.array
+        Times since `exp_start` for raw observations.
+
+    Returns
+    -------
+    np.array
+    '''
+    eth_obs_start = add_seconds(eth_start, eth_obs[0])
+    eth_obs_end = add_seconds(eth_obs_start, eth_obs[2])
+    start = (eth_obs_start - exp_start).total_seconds()
+    end = (eth_obs_end - exp_start).total_seconds()
+    return np.searchsorted(times, [start, end], side='left')
+
+
 
 def long_lounge():
     pass
