@@ -1,3 +1,10 @@
 *.pyc
 *.csv
 *.DS_Store
+
+# Ignore the raw data files as these are too large to store on github
+exp1/raw_data/
+exp2/raw_data/
+exp3/raw_data/
+exp4/raw_data/
+exp5/raw_data/
