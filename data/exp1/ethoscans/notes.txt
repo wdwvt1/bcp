@@ -1,0 +1,8 @@
+This folder contains Ethoscan reports on the data in experiment 1. This data will be used to develop the functions which replicate the Ethoscan and prove that our functions our correct. 
+
+FileName	Parameters	Start
+animal_1_06232015_to_06242015.csv	default	06/23/2015 11:46:44
+animal_1_06242015_to_06252015.csv	default	06/24/2015 09:11:21
+animal_1_06252015_to_06262015.csv	default	06/25/2015 08:56:35
+animal_1_07082015_to_07162015.csv	default	07/08/2015 10:25:48
+animal_2_07082015_to_07162015.csv	default	07/08/2015 10:25:48

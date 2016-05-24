@@ -1,15 +1,16 @@
-This folder contains the data from an experiment on 8 mice which was conducted between 06/11/2015 and 07/24/15.
+This folder contains the data from an experiment on 8 mice which was conducted between 06/11/2015 and 07/16/15. The mice are infected on day X. 
+
 
 Testing
 -------
 I tested that this data was correctly derived from the Promethion files by comparing the output of awk commands with the saved arrays. Tested with new parsing code - as of 1/13/2016.
 
 ```bash
-for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/raw_data/** | grep 5_Infection_E); do awk -F "," '{print $2}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_Xpos_1.txt; done
+for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1_raw_Promethion_061115/** | grep 5_Infection_E); do awk -F "," '{print $2}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_Xpos_1.txt; done
 # wheel count 1
-for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/raw_data/** | grep 5_Infection_E); do awk -F "," '{print $8}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_WheelCount_1.txt; done
+for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1_raw_Promethion_061115/** | grep 5_Infection_E); do awk -F "," '{print $8}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_WheelCount_1.txt; done
 # body mass 7
-for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/raw_data/** | grep 5_Infection_E); do awk -F "," '{print $70}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_BodyMass_7.txt; done
+for i in $(ls -d /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1_raw_Promethion_061115/** | grep 5_Infection_E); do awk -F "," '{print $70}' ${i} >> /Users/wdwvt/Desktop/Sonnenburg/cumnock/bcp/data/exp1/test_BodyMass_7.txt; done
 ```
 
 ```python
