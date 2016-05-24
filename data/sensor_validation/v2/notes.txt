@@ -1,0 +1,10 @@
+This folder contains drinking event data from 05/05/2016. Recording started at sample 2000, at 07:50:33 according to the system time (unsure about the promethion time - I assume it takes from the system time and not its own internal clock). The annotations of the pictures in classifications.txt are frame start and frame end of an event. The codes are:
+e - eating
+el - eating with back leg(s) on food hopper
+d - drinking
+uf - under food, means interacting around the food hopper in such a way that it may cause disturbance
+uw - under water, means interacting around the water hopper in such a way that it may cause disturbance
+
+uf and uw were not recorded consistently; it would have raised the time to annotate substantially and unsure how valuable the output will be.
+
+To verify that the annotations were correct, we compared them with the behavioral traces.

@@ -1,0 +1,25 @@
+This data contains pictures of a mouse taken with an infrared raspberry pi camera over the course of a night cycle. The goal was to develop a hand curated training set to distinguish true drinking events from scale drift, random fluctuations, etc.
+
+Using all the images taken over the 12h dark cycle, the times at which the mouse appears to be interacting with the water bottle were noted. The pictures are not included in this folder, but are available upon request. 
+
+The only mouse that was photographed was 2. 
+
+We cannot exclude the possibility that the infrared beams affected the mouse behavior or the cage recordings. 
+
+
+As a basic check that nothing went wrong during extraction we compare the following awk based parsing. 
+
+```bash
+awk -F "," '{print $2}' ./bcp/data/drinking_validation/raw_data/021916_Export >> ./bcp/data/drinking_validation/raw_data/test_xpos_1.txt
+```
+
+```python
+o = open('./bcp/data/drinking_validation/raw_data/test_xpos_1.txt')
+lines = o.readlines()
+o.close()
+d = np.array([i.strip() for i in lines[1:]]).astype(np.float32)
+d2 = np.load('./bcp/data/drinking_validation/XPos_1.npy')
+# data is from running the ./raw_data/extraction.py code
+assert (data[:, 0] == d).all()
+assert (d2 == d).all()
+```

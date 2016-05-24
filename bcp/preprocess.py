@@ -3,9 +3,6 @@ from __future__ import division
 
 import copy
 import numpy as np
-import matplotlib.pyplot as plt
-import time, datetime, imp
-from hmmlearn.hmm import MultinomialHMM
 
 def weight_sensor_positive_spikes(data, times, threshold):
     '''Find positive spikes in the weight data due to measurement. 
@@ -39,6 +36,7 @@ def weight_sensor_positive_spikes(data, times, threshold):
     time_diffs = (times[1:] - times[:-1]) > 1
     data_diffs = (data[1:] - data[:-1]) >= threshold
     return (~time_diffs * data_diffs).nonzero()[0]
+
 
 def smooth_positive_spikes(data, spikes, backward_window, forward_window):
     '''Replace positive spikes with averages of previous points in data.
@@ -88,6 +86,204 @@ def smooth_positive_spikes(data, spikes, backward_window, forward_window):
         s_data[i:i+forward_window] = s_data[i-backward_window:i].mean()
     return s_data
 
+
+def stable_sequences(data, diff, stability_duration=1):
+    '''Find sequences where consecutive entries are within `diff` of each other.
+
+    Parameters
+    ----------
+    data : np.array
+        One dimensional array containing numeric data.
+    diff : numeric
+        Float or int indicating the maximum difference that can exist between
+        consecutive entries of `data` to be considered bounded. `diff` is
+        inclusive, i.e. entries must differ more than `diff` to be excluded from
+        a sequence. Note that the absolute value of the difference between
+        elements is compared to `diff`.
+    stability_duration : int >= 1, optional, default=1
+        Duration of bounded span that must occur to be recorded as part of the
+        bouned/stable spans. Useful if, e.g., you want to require a signal to
+        be stable for a certain amount of time before counting it truly stable.
+        Note that a value below 1 for this parameter is meaningless because the
+        shortest sequence contains at least one difference (i.e. 2 consecutive
+        points with values within `diff` of one another).
+
+    Returns
+    -------
+    np.array
+        Array of size K x 2, where the 0th column contains the start indices of
+        sequences, and the 1st column contains the duration of the sequence.
+
+    Notes
+    -----
+    This function calculates stability as a function of the differences between
+    consecutive points. For N input points, there are N-1 differences. This
+    means that the output durations are one less than the index of the final
+    point of a sequence. 
+
+    Examples
+    --------
+    data = np.array([0, 0, 1, 2, 2.5, 1, 1, 1])
+    diff = 0
+    stability_duration = 1
+    seqs = stable_sequences(data, diff, stability_duration)
+    np.testing.assert_array_equal(seqs, np.array([[0, 1], [5, 2]]))
+    # To get back the actual values of the data we must add 1 to the duration.
+    np.testing.assert_array_equal(np.array([0, 0]), 
+                                  data[seqs[0][0]: seqs[0].sum()+1])
+    np.testing.assert_array_equal(np.array([1, 1, 1]), 
+                                  data[seqs[1][0]: seqs[1].sum()+1])
+    '''
+    idx = 1
+    stable_spans = []
+    n = data.size
+    while idx < n:
+        if abs(data[idx - 1] - data[idx]) <= diff:
+            stable = True
+            stable_count = 1
+            offset = 1
+            while stable and (offset + idx) < n:
+                if abs(data[offset + idx - 1] - data[offset + idx]) <= diff:
+                    stable_count += 1
+                    offset += 1
+                else:
+                    stable = False
+            if stable_count >= stability_duration:
+                stable_spans.append((idx - 1, stable_count))
+            idx += offset
+        idx += 1
+    return np.array(stable_spans)
+
+
+def valued_sequences(data, value, stability_duration=1):
+    '''Find sequences where consecutive entries are equal to `value`.
+
+    Parameters
+    ----------
+    data : np.array
+        One dimensional array containing numeric data.
+    value : numeric
+        Float or int indicating the value that consecutive entries of `data`
+        must take to be included in the returned sequence indices.
+    stability_duration : int, optional, default=1
+        Duration of sequence that must occur to be recorded as part of the
+        returned sequences. Useful if, e.g., you want to require a signal to
+        be stable for a certain amount of time before counting it truly stable.
+
+    Returns
+    -------
+    np.array
+        Array of size K x 2, where the 0th column contains the start indices of
+        spans, and the 1st column contains the end index (exclusive) of the run.
+
+    Notes
+    -----
+    Unlike `stable_sequences`, this function calculates 'stability' on a
+    pointwise fashion (i.e. it doesn't need two entries to determine if a point
+    should be included in the sequence). As such, the 1st column of the output
+    are the (exclusive) endpoints of runs.
+    '''
+    idx = 0
+    n = data.size
+    stable_spans = []
+    while idx < n:
+        if data[idx] == value:
+            offset = 1
+            stable_count = 1
+            stable = True
+            while stable and (idx + offset) < n:
+                if data[idx + offset] == value:
+                    stable_count += 1
+                    offset += 1
+                else:
+                    stable = False
+            if stable_count >= stability_duration:
+                stable_spans.append((idx, offset))
+            idx += offset
+        idx += 1
+    return np.array(stable_spans)
+
+
+def unstable_sequences(data, u_diff, s_diff=None, stability_duration=10):
+    '''Find unstable sequences in `data`.
+
+    Extended Summary
+    ----------------
+    This function finds sequences in `data` such that `stability_duration`
+    number of differences between consecutive points at the end of each sequence
+    are less than `s_diff`. This function is motivated by finding subsequences
+    where a process has exited 'statistical control'. An unstable subsequence
+    is started by a difference between consecutive elements of `data` that is
+    greater than `u_diff`.
+
+    Parameters
+    ----------
+    data : np.array
+        One dimensional array containing numeric data.
+    u_diff : numeric
+        Numeric value that is the minimum difference two consecutive elements
+        of `data` must have to trigger the start of an unstable sequence. 
+        `u_diff` is exclusive, i.e. entries must differ more than `u_diff` to
+        be unstable. 
+    s_diff : numeric, optional, default=None
+        Numeric or none. If none, set to `u_diff`. Max difference that can exist
+        between consecutive entries of `data` for those points to be considered
+        under control or stable. `s_diff` is inclusive, i.e. entries must differ
+        more than `s_diff` to be unstable. Should be smaller than `u_diff`.
+    stability_duration : int >= 1, optional, default=10
+        Duration of stability that must happen after a signal exits control to
+        be called stable once again. Note that a value below 1 for this
+        parameter is meaningless because the shortest sequence contains at
+        least two difference (i.e. 3 consecutive points).
+
+    Returns
+    -------
+    np.array
+        Array of size K x 2, where the 0th column contains the start indices of
+        sequences, and the 1st column contains the duration of the sequence.
+        Note that the duration of the sequence will be at least 1 larger than
+        `stability_duration`. This is because there must be `stability_duration`
+        differences less than `s_diff` after the out of control difference.
+
+    Notes
+    -----
+    This function calculates instability as a function of the differences
+    between consecutive points. For N input points, there are N-1 differences.
+    This means that the output durations are one less than the index of the
+    final point of a sequence.
+    '''
+    if s_diff == None:
+        s_diff = u_diff
+    idx = 1
+    unstable_spans = []
+    n = data.size
+    while idx < n:
+        if abs(data[idx - 1] - data[idx]) > u_diff:
+            stable = False
+            stable_count = 0
+            offset = 1
+            while not stable and (offset + idx) < n:
+                # Because of round off error, we have to use a combination of 
+                # testing that s_diff is bigger, and testing that it is very
+                # very close. Otherwise things like this happen:
+                # assert (not abs(.7 - .9) <= .2)
+                v = abs(data[offset + idx - 1] - data[offset + idx]) - s_diff
+                if v < 0 or np.isclose(v, 0):
+                    stable_count += 1
+                else:
+                    stable_count = 0
+                if stable_count >= stability_duration:
+                    unstable_spans.append((idx, offset))
+                    stable = True
+                else:
+                    offset += 1
+            idx += offset
+        idx += 1
+    # If we are out of control when data ends we return first unstable point
+    # and duration up to the end of the sequence.
+    if not stable:
+        unstable_spans.append((idx - (offset + 1), offset - 1))
+    return np.array(unstable_spans)
 
 
 def smooth(data, radius, a_thresh, w_thresh):
