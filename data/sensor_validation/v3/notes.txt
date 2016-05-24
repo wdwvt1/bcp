@@ -8,3 +8,33 @@ iw - interacting with water
 iw was not recorded consistently; it would have raised the time to annotate substantially and unsure how valuable the output will be.
 
 To verify that the annotations were correct, we compared them with the behavioral traces.
+
+
+Testing:
+
+```ipython
+data, time, headers = promethion_to_array('./bcp/data/sensor_validation/v3/raw_data/05062016.txt', [2], ['FoodA', 'Water'])
+np.save('./bcp/data/sensor_validation/v3/FoodA_2.npy', data[:, 0])
+np.save('./bcp/data/sensor_validation/v3/Water_2.npy', data[:, 1])
+np.save('./bcp/data/sensor_validation/v3/time.npy', np.array(time))
+
+os.system("awk -F \",\" '{print $2}' ./bcp/data/sensor_validation/v3/raw_data/05062016.txt >> ./bcp/data/sensor_validation/v3/raw_data/test_food.txt")
+os.system("awk -F \",\" '{print $3}' ./bcp/data/sensor_validation/v3/raw_data/05062016.txt >> ./bcp/data/sensor_validation/v3/raw_data/test_water.txt")
+
+w2 = np.load('./bcp/data/sensor_validation/v3/Water_2.npy')
+f2 = np.load('./bcp/data/sensor_validation/v3/FoodA_2.npy')
+
+
+o = open('./bcp/data/sensor_validation/v3/raw_data/test_water.txt')
+lines = o.readlines()
+o.close()
+w2_awk = np.array([i.strip() for i in lines[1:]]).astype(float)
+
+o = open('./bcp/data/sensor_validation/v3/raw_data/test_food.txt')
+lines = o.readlines()
+o.close()
+f2_awk = np.array([i.strip() for i in lines[1:]]).astype(float)
+
+np.testing.assert_allclose(f2, f2_awk)
+np.testing.assert_allclose(w2, w2_awk)
+```

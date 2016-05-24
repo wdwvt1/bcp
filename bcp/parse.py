@@ -44,8 +44,13 @@ def promethion_to_array(fp, cages, fields, start_timestamp=None):
         Two dimensional array containing as many rows as there are observations
         in the Promethion file and as many columns as were requested by cages
         and fields (maximum of len(cages)*len(fields)).
-    timestamps : np.array
-        One dimensional array of timestamps.
+    timestamps : list
+        List of length data.shape[0] with the ith entry being the amount of time
+        that has passed since the beginning of the experiment for the ith
+        observation.
+    keys : list
+        List of length data.shape[1] with the ith entry being the header for the
+        ith column in data.
     '''
     o = open(fp)
     header = o.readline().strip().split(',')
